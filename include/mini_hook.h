@@ -117,8 +117,8 @@ void mh_bind_thunk_slot(void **slot_addr, void *trampoline);
             "mov  -0x10(%rbp), %rsi\n"                                          \
             "mov  -0x18(%rbp), %rdx\n"                                          \
             "mov  -0x20(%rbp), %rcx\n"                                          \
-            /*"mov  -0x28(%rbp), %r8\n"   /* pass r8 (5th arg) */                 \
-            /*"mov  -0x30(%rbp), %r9\n"   /* pass r9 (6th arg) */                 \
+            /*"mov  -0x28(%rbp), %r8        pass r8 (5th arg) */                \
+            /*"mov  -0x30(%rbp), %r9        pass r9 (6th arg) */                \
                                                                                 \
             /* Keep stack 16B aligned at call site: rbp-based frame is aligned */\
             "call " MH_STR(cb_fn) "\n"                                          \
