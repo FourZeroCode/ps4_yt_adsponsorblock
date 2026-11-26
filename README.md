@@ -111,12 +111,11 @@ You'll see native YouTube TV toast notifications for:
 - **Segments found:** When SponsorBlock segments are detected (e.g., "SponsorBlock: 3 segment(s) found")
 - **Segment skipped:** When a segment is automatically skipped (e.g., "Segment Skipped: sponsor (15s)")
 
-The release build logs GitHub update downloads only.
-
 ## Technical Details
 
 - Hooks `HTMLScriptExecute` at address `0x0097fb40`
 - Local HTTP proxy server on port 4040
+- GitHub update responses are saved locally on your PS4
 - Uses PS4 native networking (`sceNet`, `sceHttp`, `sceSsl`)
 - JavaScript injection via local buffer for stability
 - SponsorBlock API: https://sponsor.ajay.app
