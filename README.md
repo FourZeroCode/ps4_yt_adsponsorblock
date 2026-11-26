@@ -1,51 +1,64 @@
-# YouTube AdBlock + SponsorBlock for PS4
+# AdlessTube
 
-A GoldHEN plugin that skips ads and sponsored segments on the PS4 YouTube Cobalt app.
+A GoldHEN plugin that blocks ads and skips sponsored segments on the PS4 YouTube  app.
 
 **Compatible with:** YouTube v02.32 from pkg-zone.com (CUSA01015)
 
 ## Features
-- ✅ Automatic ad skipping
-- ✅ SponsorBlock integration - Skip sponsored segments, intros, outros, and more
-- ✅ Native YouTube TV toast notifications
-- ✅ Local HTTP proxy server for SponsorBlock API access
-- ✅ Clean, silent operation (no debug logs)
+![AdlessTube](.github/images/adlesstube.jpg)
 
+- ✅ Automatic ad skipping
+- ✅ SponsorBlock integration - skip sponsored segments, intros, outros, and more
+- ✅ Enable or disable AdBlock and SponsorBlock independently
+- ✅ Three SponsorBlock skip modes: automatic, silent automatic, or confirmation
+- ✅ All changes take effect immediately - no YouTube restart required
+- ✅ Native YouTube TV toast notifications
+- ✅ Plugin settings integrated into YouTube's native menus
+- ✅ Update Center with manual update checks and optional startup update checking
+- ✅ Local HTTP proxy server for SponsorBlock API access
+
+![Main Settings Menu](.github/images/main_settings.jpg)
 ## Installation
 
-1. **Download the plugin**
-   - Download `yt_adblock.prx` from the [latest release](https://github.com/FourZeroCode/yt_adblock_sponsorblock_ps4/releases)
+For easier installation, use the [AdlessTube Installer](https://github.com/FourZeroCode/PS4-YT-AdBlock-SponsorBlock-Installer). It simplifies the setup, so you can skip the manual steps below.
 
-2. **Copy to PS4**
-   - Copy `yt_adblock.prx` to `/data/GoldHEN/plugins/` on your PS4
+1. **Download the plugin**
+   - Download `ps4_yt_adsponsorblock.prx` from the [latest release](https://github.com/FourZeroCode/ps4_yt_adsponsorblock/releases)
+
+2. **Copy to your PS4**
+   - Copy `ps4_yt_adsponsorblock.prx` to `/data/GoldHEN/plugins/` on your PS4
 
 3. **Configure GoldHEN**
    - Edit `/data/GoldHEN/plugins.ini` to add the following:
    ```ini
    [CUSA01015]
-   /data/GoldHEN/plugins/yt_adblock.prx
+   /data/GoldHEN/plugins/ps4_yt_adsponsorblock.prx
    ```
 
-4. **Download the configuration file**
-   - Download `config.json` from the repository root.
+4. **Restart YouTube**
+   - Close and reopen the YouTube app.
+   - You should see an **AdlessTube** toast notification when the plugin loads.
 
-5. **Copy to PS4**
-   - Copy `config.json` to `/data/youtube/` on your PS4
+The plugin creates `/data/youtube/config.json` on first launch if it does not already exist. You do not need to download or create it manually.
 
-6. **Restart YouTube**
-   - Close and reopen the YouTube app
-   - You should see a "YT AdBlock + SponsorBlock" toast notification
+## Optional Configuration
 
-## SponsorBlock Configuration
+The plugin automatically creates `/data/youtube/config.json` at first launch if it is missing. You can change these settings in YouTube’s native menus or edit the config file directly. The file contains the same settings for AdBlock, SponsorBlock, enabled SponsorBlock categories, and segment skip behavior. Configuration-file editing is optional.
 
-The optional `config.json` file lets you choose which SponsorBlock categories are enabled and how matching segments are handled.
+If you edit the file, restart YouTube for the changes to take effect.
 
-- **Categories:** To enable a category, include its name in the `categories` array. To disable a category, remove its name from the array. You can add a category again at any time by adding its name back.
-- **Skip mode:** Set `skipMode` to `auto` to skip matching segments automatically, or `confirm` to ask for confirmation before skipping.
+- **AdBlock:** Enable or disable ad skipping.
+- **SponsorBlock:** Enable or disable SponsorBlock segment detection and skipping.
+- **Categories:** Include a category name in the `categories` array to enable it. Remove the name to disable it.
+- **Skip mode:** Set `skipMode` to:
+  - `auto` — automatically skip matching segments and show a toast notification.
+  - `silent` — automatically skip matching segments without a toast notification.
+  - `confirm` — ask for confirmation before skipping a matching segment.
 
-For example, the `categories` array contains the category names you want enabled, and `skipMode` controls the skipping behavior. By default all categories are enabled and skipped automatically, you can edit `config.json` before copying it to `/data/youtube/` on your PS4.
+By default, all SponsorBlock categories are enabled and matching segments are skipped automatically.
 
 ### Available SponsorBlock Categories
+![SponsorBlock Categories](.github/images/sponsorblock_cat.jpg)
 
 Use these exact category names in the `categories` array. Remove a name to disable that category, or add it back to enable it.
 
@@ -66,26 +79,39 @@ Use these exact category names in the `categories` array. Remove a name to disab
 
 Category labels and intended use follow SponsorBlock's category definitions. The exact segments skipped depend on the submitted segment data and how each segment is categorized.
 
+## Native YouTube Menus
+![SponsorBlock Categories](.github/images/native_menu.jpg)
+
+AdlessTube settings are integrated into YouTube’s native Settings and video-player menus.
+
+The Update Center provides a manual update check and an option to check for updates when YouTube starts. Startup checking uses a cooldown to avoid checking GitHub on every launch. You can also run a manual check whenever you want.
+
 ## How it Works
 
 ### Ad Skipping
+
 The plugin hooks into the YouTube Cobalt app's HTML script execution engine and injects custom JavaScript that detects and skips ads automatically.
 
 ### SponsorBlock Integration
+
 The plugin creates a local HTTP proxy server on `localhost:4040` that:
+
 1. Receives requests from the injected JavaScript
 2. Fetches segment data from the SponsorBlock API using PS4's native HTTP library
 3. Returns the data to JavaScript
-4. Displays a toast with segment information, letting you skip or continue watching, or skips automatically, depending on your configuration.
+4. Displays a toast with segment information, lets you skip or continue watching, or skips automatically, depending on your configuration
 
 This approach bypasses Cobalt browser's XHR security restrictions without needing CSP bypass.
 
 ## Toast Notifications
 
 You'll see native YouTube TV toast notifications for:
-- **Plugin enabled**: When YouTube loads
-- **Segments found**: When SponsorBlock segments are detected (e.g., "SponsorBlock: 3 segment(s) found")
-- **Segment skipped**: When a segment is automatically skipped (e.g., "Segment Skipped: sponsor (15s)")
+
+- **Plugin loaded:** When YouTube loads
+- **Segments found:** When SponsorBlock segments are detected (e.g., "SponsorBlock: 3 segment(s) found")
+- **Segment skipped:** When a segment is automatically skipped (e.g., "Segment Skipped: sponsor (15s)")
+
+The release build logs GitHub update downloads only.
 
 ## Technical Details
 
@@ -97,18 +123,19 @@ You'll see native YouTube TV toast notifications for:
 
 ## Building from Source
 
-Make sure `$OO_PS4_TOOLCHAIN` is in your PATH (see OpenOrbis for install and setup instructions)
+Make sure `$OO_PS4_TOOLCHAIN` is in your PATH (see OpenOrbis for install and setup instructions).
 
 ```bash
-cd GoldHEN_Plugins_Repository/plugin_src/yt_adblock_sponsorblock_ps4
+cd GoldHEN_Plugins_Repository/plugin_src/ps4_yt_adsponsorblock
 ./build.sh
 ```
 
-The compiled plugin will be in `../../bin/plugins/prx_final/yt_adblock_sponsorblock_ps4.prx`
+The compiled plugin will be in `../../bin/plugins/prx_final/ps4_yt_adsponsorblock.prx`.
 
 ### Debug Build
 
 To enable debug logging:
+
 ```bash
 DEBUG=1 ./build.sh
 ```
