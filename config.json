@@ -1,17 +1,20 @@
 {
   "categories": [
     "sponsor",
-    "selfpromo",
-    "interaction",
     "intro",
     "outro",
-    "preview",
+    "selfpromo",
+    "interaction",
     "music_offtopic",
+    "preview",
     "filler",
-    "hook",
-    "poi_highlight",
     "exclusive_access",
-    "chapter"
+    "poi_highlight",
+    "chapter",
+    "hook"
   ],
-  "skipMode": "auto"
+  "skipMode": "confirm",
+  "checkUpdatesOnStartup": true,
+  "adBlockEnabled": true,
+  "sponsorBlockEnabled": true
 }
