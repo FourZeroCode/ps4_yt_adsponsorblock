@@ -20,6 +20,9 @@ bool try_extract_script_from_candidate(uint64_t candidate,
                                        StringLikeLayout* out_layout = nullptr);
 
 bool ensure_js_payload_loaded();
+bool get_sponsorblock_config_json(char* out, size_t out_size);
+bool save_sponsorblock_config_json(const char* json, size_t length);
+bool is_update_check_on_startup_enabled(void);
 const std::string& get_js_payload();
 void reset_js_payload_state();
 
