@@ -54,37 +54,44 @@ jobs:
           echo "GOLDHEN_SDK=$(pwd)" >> $GITHUB_ENV
           make PRINTF=1 DEBUGFLAGS=1
 
+      - name: Set release version
+        run: |
+          COMMIT_COUNT="$(git -C plugin_source rev-list HEAD --count)"
+          BUILD_VERSION="1.${COMMIT_COUNT}.0"
+          sed -i -E "s/#define PS4_YT_ADSPONSORBLOCK_VERSION \".*\"/#define PS4_YT_ADSPONSORBLOCK_VERSION \"${BUILD_VERSION}\"/" plugin_source/include/version.h
+          echo "BUILD_VERSION=${BUILD_VERSION}" >> "$GITHUB_ENV"
+
       - name: Set up plugin in repository structure
         run: |
-          rm -rf GoldHEN_Plugins_Repository/plugin_src/yt_adblock
-          cp -r plugin_source GoldHEN_Plugins_Repository/plugin_src/yt_adblock
+          rm -rf GoldHEN_Plugins_Repository/plugin_src/ps4_yt_adsponsorblock
+          cp -r plugin_source GoldHEN_Plugins_Repository/plugin_src/ps4_yt_adsponsorblock
 
       - name: Build plugin (Release)
         working-directory: GoldHEN_Plugins_Repository
         run: |
           mkdir -p bin/plugins/prx_final bin/plugins/elf_final
-          make -C plugin_src/yt_adblock clean
-          make -C plugin_src/yt_adblock PRINTF=1
+          make -C plugin_src/ps4_yt_adsponsorblock clean
+          make -C plugin_src/ps4_yt_adsponsorblock PRINTF=1
 
       - name: Build plugin (Debug)
         working-directory: GoldHEN_Plugins_Repository
         run: |
           mkdir -p bin/plugins/prx_debug bin/plugins/elf_debug
-          make -C plugin_src/yt_adblock clean
-          make -C plugin_src/yt_adblock DEBUG=1 PRINTF=1
+          make -C plugin_src/ps4_yt_adsponsorblock clean
+          make -C plugin_src/ps4_yt_adsponsorblock DEBUG=1 PRINTF=1
 
       - name: Upload release PRX
         uses: actions/upload-artifact@v4
         with:
-          name: yt_adblock_release
-          path: GoldHEN_Plugins_Repository/bin/plugins/prx_final/yt_adblock.prx
+          name: ps4_yt_adsponsorblock_release
+          path: GoldHEN_Plugins_Repository/bin/plugins/prx_final/ps4_yt_adsponsorblock.prx
           if-no-files-found: error
 
       - name: Upload debug PRX
         uses: actions/upload-artifact@v4
         with:
-          name: yt_adblock_debug
-          path: GoldHEN_Plugins_Repository/bin/plugins/prx_debug/yt_adblock.prx
+          name: ps4_yt_adsponsorblock_debug
+          path: GoldHEN_Plugins_Repository/bin/plugins/prx_debug/ps4_yt_adsponsorblock.prx
           if-no-files-found: error
 
       - name: Create Release
@@ -93,6 +100,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="v1.$(git rev-list HEAD --count)-$(echo ${GITHUB_SHA} | cut -c1-8)"
-          cp ../GoldHEN_Plugins_Repository/bin/plugins/prx_final/yt_adblock.prx ./yt_adblock.prx
-          gh release create "$TAG" yt_adblock.prx --target "$GITHUB_SHA" -t "$TAG" --generate-notes
+          TAG="v${BUILD_VERSION}"
+          cp ../GoldHEN_Plugins_Repository/bin/plugins/prx_final/ps4_yt_adsponsorblock.prx ./ps4_yt_adsponsorblock.prx
+          gh release create "$TAG" ps4_yt_adsponsorblock.prx --target "$GITHUB_SHA" -t "$TAG" --generate-notes

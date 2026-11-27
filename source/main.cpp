@@ -16,6 +16,7 @@
 #include "patch.h"
 #include "util.h"
 #include "proxy.h"
+#include "update_checker.h"
 
 extern "C" void mh_log(const char* fmt, ...);
 
@@ -202,6 +203,9 @@ extern "C" void my_HTMLScriptExecute(void* self, long arg2, uint64_t arg3,
   g_execute_reentry = false;
 
   g_direct_injection_done = true;
+  // Start the updater worker only after the injected script has scheduled its
+  // welcome toast. The worker waits 2.5 seconds before doing any network I/O.
+  start_update_check_after_welcome_toast();
   mh_log("[hook] INJECT OK — JS executed, slot switched to ret gadget\n");
 
   // Note: thunk's tramp_slot was set to ret_gadget at the top of this function.
@@ -306,6 +310,7 @@ extern "C" s32 attr_public plugin_load(s32, const char**) {
 }
 
 extern "C" s32 attr_public plugin_unload(s32, const char**) {
+  stop_update_checker();
   stop_sponsorblock_proxy();
 
   mh_remove(&g_execute_hook);

@@ -1,8 +1,12 @@
+#include "proxy.h"
+#include "update_checker.h"
+#include "util.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <string>
 #include <netinet/in.h>
 #include <sys/socket.h>
 // Hide broken stubs before including Http.h
@@ -41,6 +45,15 @@ static int32_t g_http_ctx_id = -1;
 static int32_t g_ssl_ctx_id = -1;
 static int32_t g_net_pool_id = -1;
 static OrbisNetId g_server_sock = -1;
+static pthread_mutex_t g_update_status_mutex = PTHREAD_MUTEX_INITIALIZER;
+static char g_update_status[256] = "{\"state\":\"checking\"}";
+
+extern "C" void set_update_status(const char* status) {
+    if (!status) return;
+    pthread_mutex_lock(&g_update_status_mutex);
+    snprintf(g_update_status, sizeof(g_update_status), "%s", status);
+    pthread_mutex_unlock(&g_update_status_mutex);
+}
 
 static bool init_http_client(int net_mem_id) {
     // Load HTTP and SSL modules
@@ -193,6 +206,100 @@ static void handle_client(OrbisNetId client_sock) {
     request_buf[received] = '\0';
 
     PROXY_LOG("Request: %.100s", request_buf);
+
+    // Start a manual check using the same updater worker as the automatic check.
+    if (strncmp(request_buf, "GET /__manual_update_check ", 27) == 0) {
+        bool accepted = request_manual_update_check();
+        const char* body = accepted ? "{\"accepted\":true}" : "{\"accepted\":false}";
+        snprintf(response_buf, sizeof(response_buf),
+                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\nContent-Length: %zu\r\n\r\n%s",
+                 strlen(body), body);
+        sceNetSend(client_sock, response_buf, strlen(response_buf), 0);
+        sceNetSocketClose(client_sock);
+        return;
+    }
+
+    // Start installation only after the user explicitly selects Update.
+    if (strncmp(request_buf, "GET /__start_update ", 20) == 0) {
+        bool accepted = request_update_install();
+        const char* body = accepted ? "{\"accepted\":true}" : "{\"accepted\":false}";
+        snprintf(response_buf, sizeof(response_buf),
+                 "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nConnection: close\r\nContent-Length: %zu\r\n\r\n%s",
+                 strlen(body), body);
+        sceNetSend(client_sock, response_buf, strlen(response_buf), 0);
+        sceNetSocketClose(client_sock);
+        return;
+    }
+
+    // Return the latest valid SponsorBlock settings from config.json.
+    if (strncmp(request_buf, "GET /__sponsorblock_config ", 27) == 0) {
+        char config_json[2048] = {0};
+        if (get_sponsorblock_config_json(config_json, sizeof(config_json))) {
+            snprintf(response_buf, sizeof(response_buf),
+                     "HTTP/1.1 200 OK\r\n"
+                     "Content-Type: application/json\r\n"
+                     "Access-Control-Allow-Origin: *\r\n"
+                     "Cache-Control: no-store\r\n"
+                     "Connection: close\r\n"
+                     "Content-Length: %zu\r\n\r\n%s",
+                     strlen(config_json), config_json);
+        } else {
+            const char* body = "{\"error\":\"config_unavailable\"}";
+            snprintf(response_buf, sizeof(response_buf),
+                     "HTTP/1.1 503 Service Unavailable\r\n"
+                     "Content-Type: application/json\r\n"
+                     "Access-Control-Allow-Origin: *\r\n"
+                     "Cache-Control: no-store\r\n"
+                     "Connection: close\r\n"
+                     "Content-Length: %zu\r\n\r\n%s",
+                     strlen(body), body);
+        }
+        sceNetSend(client_sock, response_buf, strlen(response_buf), 0);
+        sceNetSocketClose(client_sock);
+        return;
+    }
+
+    // Save SponsorBlock settings selected in the on-screen menu.
+    if (strncmp(request_buf, "POST /__save_sponsorblock_config ", 33) == 0) {
+        char* body = strstr(request_buf, "\r\n\r\n");
+        bool saved = false;
+        if (body) {
+            body += 4;
+            size_t body_len = strlen(body);
+            const char* length_header = strstr(request_buf, "Content-Length:");
+            if (length_header) {
+                size_t declared = (size_t)strtoul(length_header + 15, NULL, 10);
+                if (declared <= body_len) body_len = declared;
+            }
+            saved = save_sponsorblock_config_json(body, body_len);
+        }
+        const char* response_body = saved ? "{\"saved\":true}" : "{\"saved\":false}";
+        snprintf(response_buf, sizeof(response_buf),
+                 "HTTP/1.1 %s\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: *\r\nCache-Control: no-store\r\nConnection: close\r\nContent-Length: %zu\r\n\r\n%s",
+                 saved ? "200 OK" : "400 Bad Request", strlen(response_body), response_body);
+        sceNetSend(client_sock, response_buf, strlen(response_buf), 0);
+        sceNetSocketClose(client_sock);
+        return;
+    }
+
+    // Native updater -> YouTube JavaScript status bridge.
+    if (strncmp(request_buf, "GET /__update_status ", 21) == 0) {
+        char status_copy[sizeof(g_update_status)];
+        pthread_mutex_lock(&g_update_status_mutex);
+        snprintf(status_copy, sizeof(status_copy), "%s", g_update_status);
+        pthread_mutex_unlock(&g_update_status_mutex);
+        snprintf(response_buf, sizeof(response_buf),
+                 "HTTP/1.1 200 OK\r\n"
+                 "Content-Type: application/json\r\n"
+                 "Access-Control-Allow-Origin: *\r\n"
+                 "Cache-Control: no-store\r\n"
+                 "Connection: close\r\n"
+                 "Content-Length: %zu\r\n\r\n%s",
+                 strlen(status_copy), status_copy);
+        sceNetSend(client_sock, response_buf, strlen(response_buf), 0);
+        sceNetSocketClose(client_sock);
+        return;
+    }
 
     // Parse video ID from URL: GET /videoID HTTP/1.1
     char* get_line = strstr(request_buf, "GET /");
